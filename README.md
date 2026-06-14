@@ -1,16 +1,4 @@
-# F1-GPT
-
-> **Your personal AI assistant for Formula 1 — drivers, races, regulations, and history, grounded in real F1 sources.**
-
-<!-- ============================================================
-     PLACEHOLDER: Project banner / demo GIF
-     WHAT TO ADD: A short screen recording (10–20 seconds) or GIF
-     showing the chat UI answering an F1 question. Host it on GitHub,
-     Imgur, or attach when you post on LinkedIn.
-     Example: ![F1-GPT demo](./docs/demo.gif)
-     ============================================================ -->
-<!-- [ADD YOUR DEMO GIF OR SCREENSHOT HERE] -->
-
+# Formula 1 - GPT
 ---
 
 ## 📌 Project Overview
@@ -20,85 +8,125 @@
 The result: answers that are more grounded in current articles, Wikipedia pages, official F1 content, and news — while keeping inference **private and cost-free** on your own machine.
 
 ---
+<!-- ## Why I Built This
 
-## Why I Built This
 
-<!-- ============================================================
-     PLACEHOLDER: Your personal story (great for LinkedIn)
-     WHAT TO ADD: 2–4 sentences about YOUR motivation. Be specific.
-     Examples:
-     - "As an F1 fan, I wanted a single place to ask questions about
-        standings, driver history, and rule changes without digging
-        through ten websites."
-     - "I built this to learn RAG end-to-end: scraping → embeddings →
-        vector search → LLM prompting."
-     - "I migrated from cloud APIs to Ollama to run everything locally
-        and avoid API costs during development."
-     ============================================================ -->
 
-**[ADD YOUR STORY HERE — why this project matters to you, what problem it solves, or what you learned building it]**
+**[I built this to learn RAG end-to-end: scraping → embeddings →vector search → LLM prompting.]**
 
----
+--- -->
 
 ## Key Features
 
-| Feature | Description |
-|--------|-------------|
-| **RAG-powered answers** | User questions are embedded and matched against F1 documents stored in Astra DB |
-| **Local LLM via Ollama** | No OpenAI dependency — chat and embeddings run through Ollama on your machine |
-| **Web scraping pipeline** | Puppeteer loads F1 URLs, strips HTML, chunks text, and stores vectors |
-| **Modern chat UI** | Next.js app with welcome screen, quick prompts, light/dark theme, and streaming-style responses |
-| **Quick prompts** | One-click starter questions (championship winners, driver careers, calendar, etc.) |
-| **Extensible data sources** | Add more URLs to the seed script to expand knowledge coverage |
+| Feature                     | Description                                                                                     |
+| --------------------------- | ----------------------------------------------------------------------------------------------- |
+| **RAG-powered answers**     | User questions are embedded and matched against F1 documents stored in Astra DB                 |
+| **Local LLM via Ollama**    | No OpenAI dependency — chat and embeddings run through Ollama on your machine                   |
+| **Web scraping pipeline**   | Puppeteer loads F1 URLs, strips HTML, chunks text, and stores vectors                           |
+| **Modern chat UI**          | Next.js app with welcome screen, quick prompts, light/dark theme, and streaming-style responses |
+| **Quick prompts**           | One-click starter questions (championship winners, driver careers, calendar, etc.)              |
+| **Extensible data sources** | Add more URLs to the seed script to expand knowledge coverage                                   |
+
 
 ---
 
 ## How It Works (Architecture)
 
-When you ask a question, the app follows a standard RAG pipeline:
+## 🔄 Data Ingestion Flow
+
+Below is the step-by-step architectural workflow showing how data moves from the raw Formula 1 web URLs down into the cloud vector store:
 
 ```mermaid
-flowchart LR
-    A[User question] --> B[Ollama Embeddings]
-    B --> C[Vector search in Astra DB]
-    C --> D[Top 5 relevant text chunks]
-    D --> E[System prompt + context]
-    E --> F[Ollama LLM]
-    F --> G[Answer in chat UI]
+graph TD
+    %% Define Styles & Colors
+    classDef init fill:#1a202c,stroke:#4a5568,stroke-width:2px,color:#fff;
+    classDef process fill:#edf2f7,stroke:#cbd5e0,stroke-width:2px,color:#2d3748;
+    classDef cloud fill:#ebf8ff,stroke:#bee3f8,stroke-width:2px,color:#2b6cb0;
+    classDef database fill:#f0fff4,stroke:#c6f6d5,stroke-width:2px,color:#22543d;
+
+    %% Workflow Nodes
+    Start([Start Ingestion Pipeline]) --> Init[Initialize AstraDB Client & Splitter]:::init
+    Init --> Coll[Create AstraDB Collection <br><i>Dimension: 1536 | Metric: dot_product</i>]:::database
+
+    subgraph Loop [Data Processing Loop per URL]
+        Coll --> Fetch[Target F1 URLs Array]:::process
+        Fetch --> Scrape[Puppeteer Web Base Loader<br><i>Headless Scrape & HTML Regex Stripping</i>]:::process
+        Scrape --> Chunk[Recursive Character Text Splitter<br><i>Size: 512 | Overlap: 100</i>]:::process
+        
+        subgraph Vectorization [Chunk Insertion Loop]
+            Chunk --> OpenAI[OpenAI API Call<br><i>Model: text-embedding-3-small</i>]:::cloud
+            OpenAI --> Extract[Extract Float Vector Array]:::process
+            Extract --> Insert[AstraDB Collection Insert<br><i>$vector + Raw Text Metadata</i>]:::database
+        end
+    end
+
+    Insert --> Next{More Chunks/URLs?}:::process
+    Next -- Yes --> Fetch
+    Next -- No --> End([Pipeline Complete])
 ```
+
+
+
+## 💬 Runtime Query Flow (Ollama + Astra DB)
+
+The diagram below details the operational timeline that takes place from the moment a user posts a prompt in the chat UI to the final local contextual generation:
+
+```mermaid
+flowchart TD
+    %% Define Styles & Colors
+    classDef user fill:#1a202c,stroke:#4a5568,stroke-width:2px,color:#fff;
+    classDef process fill:#edf2f7,stroke:#cbd5e0,stroke-width:2px,color:#2d3748;
+    classDef local fill:#ebf8ff,stroke:#bee3f8,stroke-width:2px,color:#2b6cb0;
+    classDef database fill:#f0fff4,stroke:#c6f6d5,stroke-width:2px,color:#22543d;
+
+    %% Workflow Nodes
+    A([User Prompts]):::user --> B[Ollama Embeddings API<br><i>Model: qwen3-embedding:0.6b-fp16</i>]:::local
+    B --> C[Generate Query Vector]:::process
+    
+    C --> D[Vector Similarity Search<br><i>Astra DB Collection</i>]:::database
+    D --> E[Retrieve Top 5 Relevant Chunks]:::process
+    
+    E --> F[Construct Augmented Prompt<br><i>System Instructions + Context + History</i>]:::process
+    F --> G[Ollama Chat Completion API<br><i>Local LLM Generation</i>]:::local
+    G --> H([Render Grounded Answer in UI]):::user
+```
+
+
 
 ### Step-by-step
 
 1. **Ingestion (one-time / on demand)** — The seed script (`scripts/loadDb.ts`) uses Puppeteer to scrape F1 web pages, splits content into ~512-character chunks, generates embeddings with Ollama, and stores `{ text, $vector }` documents in **DataStax Astra DB**.
-
 2. **Query time** — When you send a message in the chat:
-   - Your question is embedded with the same Ollama embedding model.
-   - Astra DB returns the **5 most similar chunks** via vector search.
-   - Those chunks are injected into a system prompt.
-   - **Ollama LLM** generates the final answer using that context plus conversation history.
-
+  - Your question is embedded with the same Ollama embedding model.
+  - Astra DB returns the **5 most similar chunks** via vector search.
+  - Those chunks are injected into a system prompt.
+  - **Ollama LLM** generates the final answer using that context plus conversation history.
 3. **Fallback** — If no strong matches are found, the model still answers using its general F1 knowledge (as instructed in the prompt).
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | Next.js 16, React 19, Tailwind CSS 4 |
-| **Backend** | Next.js API Route (`/api/chat`) |
-| **LLM & Embeddings** | [Ollama](https://ollama.com) via `@langchain/ollama` |
-| **Vector database** | [DataStax Astra DB](https://www.datastax.com/products/datastax-astra) |
-| **Orchestration** | LangChain (document loaders, text splitters) |
-| **Scraping** | Puppeteer (`PuppeteerWebBaseLoader`) |
-| **Language** | TypeScript |
+
+| Layer                | Technology                                                            |
+| -------------------- | --------------------------------------------------------------------- |
+| **Frontend**         | Next.js 16, React 19, Tailwind CSS 4                                  |
+| **Backend**          | Next.js API Route (`/api/chat`)                                       |
+| **LLM & Embeddings** | [Ollama](https://ollama.com) via `@langchain/ollama`                  |
+| **Vector database**  | [DataStax Astra DB](https://www.datastax.com/products/datastax-astra) |
+| **Orchestration**    | LangChain (document loaders, text splitters)                          |
+| **Scraping**         | Puppeteer (`PuppeteerWebBaseLoader`)                                  |
+| **Language**         | TypeScript                                                            |
+
 
 ### Default Ollama models
 
-| Purpose | Default model | Env override |
-|---------|---------------|--------------|
+
+| Purpose    | Default model               | Env override             |
+| ---------- | --------------------------- | ------------------------ |
 | Embeddings | `qwen3-embedding:0.6b-fp16` | `OLLAMA_EMBEDDING_MODEL` |
-| Chat / LLM | `llama2:7b` | `OLLAMA_LLM_MODEL` |
+| Chat / LLM | `llama2:7b`                 | `OLLAMA_LLM_MODEL`       |
+
 
 You can swap these for any models you've pulled in Ollama (e.g. `llama3`, `mistral`, `gemma`).
 
@@ -138,7 +166,7 @@ ollama pull qwen3-embedding:0.6b-fp16
 ### 1. Clone and install
 
 ```bash
-git clone [ADD YOUR REPO URL]
+git clone https://github.com/dineshkanishkar3/f1-gpt.git
 cd f1-gpt
 npm install
 ```
@@ -188,38 +216,20 @@ The seed script currently ingests content from sources such as:
 - [formula1.com](https://www.formula1.com) (latest news, race results, calendars)
 - F1 news and live coverage sites
 
-<!-- ============================================================
-     PLACEHOLDER: Custom data sources
-     WHAT TO ADD: List any extra URLs or datasets YOU added, e.g.
-     "I also added ESPN F1 standings and my own markdown notes on
-     2026 regulations."
-     ============================================================ -->
 
-**[OPTIONAL: List any additional sources you configured beyond the defaults]**
 
 ---
 
 ## Screenshots
 
-<!-- ============================================================
-     PLACEHOLDER: Screenshots for GitHub & LinkedIn
-     WHAT TO ADD: 2–3 images:
-     1. Welcome screen with quick prompts (light or dark theme)
-     2. A sample Q&A (e.g. "Who won the 2024 championship?")
-     3. Optional: terminal showing Ollama + seed script success
-     Save under docs/ or .github/ and uncomment the lines below.
-     ============================================================ -->
-
-<!-- ![Welcome screen](./docs/screenshot-welcome.png) -->
-<!-- ![Chat example](./docs/screenshot-chat.png) -->
-
-**[ADD SCREENSHOTS HERE]**
+Home Screen
+Loading response
+Chat window with response
 
 ---
 
 ## Roadmap
 
-- [ ] Streaming responses — show Ollama replies token-by-token in the chat  
-- [ ] Source citations — link answers back to the F1 pages they came from  
-- [ ] New chat — button to clear the conversation and start fresh  
-
+- [ ] Streaming responses — show Ollama replies token-by-token in the chat
+- [ ] Source citations — link answers back to the F1 pages they came from
+- [ ] New chat — button to clear the conversation and start fresh
