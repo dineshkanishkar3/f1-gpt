@@ -23,7 +23,7 @@ The result: answers that are more grounded in current articles, Wikipedia pages,
 | Feature                     | Description                                                                                     |
 | --------------------------- | ----------------------------------------------------------------------------------------------- |
 | **RAG-powered answers**     | User questions are embedded and matched against F1 documents stored in Astra DB                 |
-| **Local LLM via Ollama**    | No OpenAI dependency — chat and embeddings run through Ollama on your machine                   |
+| **Local LLM via Ollama**    | No cloud based model dependency — chat and embeddings run through Ollama on your machine                   |
 | **Web scraping pipeline**   | Puppeteer loads F1 URLs, strips HTML, chunks text, and stores vectors                           |
 | **Modern chat UI**          | Next.js app with welcome screen, quick prompts, light/dark theme, and streaming-style responses |
 | **Quick prompts**           | One-click starter questions (championship winners, driver careers, calendar, etc.)              |
