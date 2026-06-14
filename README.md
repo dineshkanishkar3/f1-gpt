@@ -53,8 +53,8 @@ flowchart TD
         Scrape --> Chunk["Recursive Character Text Splitter\nSize: 512 | Overlap: 100"]:::process
 
         subgraph Vectorization [Chunk Insertion Loop]
-            Chunk --> OpenAI["OpenAI API Call\nModel: text-embedding-3-small"]:::cloud
-            OpenAI --> Extract[Extract Float Vector Array]:::process
+            Chunk --> ollama["ollama embedding API\nModel: qwen-embedding"]:::cloud
+            Ollama --> Extract[Extract Float Vector Array]:::process
             Extract --> Insert["AstraDB Collection Insert\n$vector + Raw Text Metadata"]:::database
         end
     end
