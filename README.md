@@ -1,4 +1,5 @@
 # Formula 1 - GPT
+
 ---
 
 ## 📌 Project Overview
@@ -8,6 +9,7 @@
 The result: answers that are more grounded in current articles, Wikipedia pages, official F1 content, and news — while keeping inference **private and cost-free** on your own machine.
 
 ---
+
 <!-- ## Why I Built This
 
 
@@ -27,7 +29,6 @@ The result: answers that are more grounded in current articles, Wikipedia pages,
 | **Quick prompts**           | One-click starter questions (championship winners, driver careers, calendar, etc.)              |
 | **Extensible data sources** | Add more URLs to the seed script to expand knowledge coverage                                   |
 
-
 ---
 
 ## How It Works (Architecture)
@@ -37,26 +38,24 @@ The result: answers that are more grounded in current articles, Wikipedia pages,
 Below is the step-by-step architectural workflow showing how data moves from the raw Formula 1 web URLs down into the cloud vector store:
 
 ```mermaid
-graph TD
-    %% Define Styles & Colors
-    classDef init fill:#1a202c,stroke:#4a5568,stroke-width:2px,color:#fff;
-    classDef process fill:#edf2f7,stroke:#cbd5e0,stroke-width:2px,color:#2d3748;
-    classDef cloud fill:#ebf8ff,stroke:#bee3f8,stroke-width:2px,color:#2b6cb0;
-    classDef database fill:#f0fff4,stroke:#c6f6d5,stroke-width:2px,color:#22543d;
+flowchart TD
+    classDef init fill:#1a202c,stroke:#4a5568,stroke-width:2px,color:#fff
+    classDef process fill:#edf2f7,stroke:#cbd5e0,stroke-width:2px,color:#2d3748
+    classDef cloud fill:#ebf8ff,stroke:#bee3f8,stroke-width:2px,color:#2b6cb0
+    classDef database fill:#f0fff4,stroke:#c6f6d5,stroke-width:2px,color:#22543d
 
-    %% Workflow Nodes
     Start([Start Ingestion Pipeline]) --> Init[Initialize AstraDB Client & Splitter]:::init
-    Init --> Coll[Create AstraDB Collection <br><i>Dimension: 1536 | Metric: dot_product</i>]:::database
+    Init --> Coll["Create AstraDB Collection\nDimension: 1536 | Metric: dot_product"]:::database
 
     subgraph Loop [Data Processing Loop per URL]
         Coll --> Fetch[Target F1 URLs Array]:::process
-        Fetch --> Scrape[Puppeteer Web Base Loader<br><i>Headless Scrape & HTML Regex Stripping</i>]:::process
-        Scrape --> Chunk[Recursive Character Text Splitter<br><i>Size: 512 | Overlap: 100</i>]:::process
-        
+        Fetch --> Scrape["Puppeteer Web Base Loader\nHeadless Scrape & HTML Regex Stripping"]:::process
+        Scrape --> Chunk["Recursive Character Text Splitter\nSize: 512 | Overlap: 100"]:::process
+
         subgraph Vectorization [Chunk Insertion Loop]
-            Chunk --> OpenAI[OpenAI API Call<br><i>Model: text-embedding-3-small</i>]:::cloud
+            Chunk --> OpenAI["OpenAI API Call\nModel: text-embedding-3-small"]:::cloud
             OpenAI --> Extract[Extract Float Vector Array]:::process
-            Extract --> Insert[AstraDB Collection Insert<br><i>$vector + Raw Text Metadata</i>]:::database
+            Extract --> Insert["AstraDB Collection Insert\n$vector + Raw Text Metadata"]:::database
         end
     end
 
@@ -64,8 +63,6 @@ graph TD
     Next -- Yes --> Fetch
     Next -- No --> End([Pipeline Complete])
 ```
-
-
 
 ## 💬 Runtime Query Flow (Ollama + Astra DB)
 
@@ -82,31 +79,30 @@ flowchart TD
     %% Workflow Nodes
     A([User Prompts]):::user --> B[Ollama Embeddings API<br><i>Model: qwen3-embedding:0.6b-fp16</i>]:::local
     B --> C[Generate Query Vector]:::process
-    
+
     C --> D[Vector Similarity Search<br><i>Astra DB Collection</i>]:::database
     D --> E[Retrieve Top 5 Relevant Chunks]:::process
-    
+
     E --> F[Construct Augmented Prompt<br><i>System Instructions + Context + History</i>]:::process
     F --> G[Ollama Chat Completion API<br><i>Local LLM Generation</i>]:::local
     G --> H([Render Grounded Answer in UI]):::user
 ```
 
-
-
 ### Step-by-step
 
 1. **Ingestion (one-time / on demand)** — The seed script (`scripts/loadDb.ts`) uses Puppeteer to scrape F1 web pages, splits content into ~512-character chunks, generates embeddings with Ollama, and stores `{ text, $vector }` documents in **DataStax Astra DB**.
 2. **Query time** — When you send a message in the chat:
-  - Your question is embedded with the same Ollama embedding model.
-  - Astra DB returns the **5 most similar chunks** via vector search.
-  - Those chunks are injected into a system prompt.
-  - **Ollama LLM** generates the final answer using that context plus conversation history.
+
+- Your question is embedded with the same Ollama embedding model.
+- Astra DB returns the **5 most similar chunks** via vector search.
+- Those chunks are injected into a system prompt.
+- **Ollama LLM** generates the final answer using that context plus conversation history.
+
 3. **Fallback** — If no strong matches are found, the model still answers using its general F1 knowledge (as instructed in the prompt).
 
 ---
 
 ## Tech Stack
-
 
 | Layer                | Technology                                                            |
 | -------------------- | --------------------------------------------------------------------- |
@@ -118,15 +114,12 @@ flowchart TD
 | **Scraping**         | Puppeteer (`PuppeteerWebBaseLoader`)                                  |
 | **Language**         | TypeScript                                                            |
 
-
 ### Default Ollama models
-
 
 | Purpose    | Default model               | Env override             |
 | ---------- | --------------------------- | ------------------------ |
 | Embeddings | `qwen3-embedding:0.6b-fp16` | `OLLAMA_EMBEDDING_MODEL` |
 | Chat / LLM | `llama2:7b`                 | `OLLAMA_LLM_MODEL`       |
-
 
 You can swap these for any models you've pulled in Ollama (e.g. `llama3`, `mistral`, `gemma`).
 
@@ -216,15 +209,28 @@ The seed script currently ingests content from sources such as:
 - [formula1.com](https://www.formula1.com) (latest news, race results, calendars)
 - F1 news and live coverage sites
 
-
-
 ---
 
 ## Screenshots
 
-Home Screen
-Loading response
-Chat window with response
+## 📸 User Interface & Execution States
+
+Below is a visual walkthrough of the conversational interface, showcasing the live pipeline state from initial query submission to final grounded generation.
+
+### 🏁 1. Base Chat Interface
+
+The clean, minimal landing workspace where users can submit raw technical or historical Formula 1 questions to the underlying RAG system.
+![F1-GPT Chat Interface Preview](screenshots/image.png)
+
+### ⌛ 2. Real-Time Retrieval & Thinking State
+
+The processing workflow while the system executes its vector search in DataStax Astra DB, extracts relevant knowledge chunks, and runs local contextual reasoning.
+![System thinking and loading context](screenshots/image-1.png)
+
+### 🏎️ 3. Context-Grounded Response Output
+
+The final streaming generation delivered by the LLM, synthesizing the background database context into a precise, accurate answer.
+![F1-GPT final response](screenshots/image-2.png)
 
 ---
 
