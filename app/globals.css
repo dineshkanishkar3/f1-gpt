@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@theme {
+  --color-f1-red: #e10600;
+  --color-f1-red-hover: #c00500;
+  --color-f1-red-soft: #ffe8e7;
+  --color-f1-red-muted: #ffc9c7;
+
+  --color-f1-bg: #faf0ef;
+  --color-f1-bg-subtle: #f5e4e3;
+  --color-f1-surface: #ffffff;
+  --color-f1-surface-elevated: #fff5f4;
+  --color-f1-text: #1a0f0f;
+  --color-f1-text-muted: #7a5555;
+  --color-f1-border: #f0c4c2;
+
+  --color-f1-bg-dark: #0a0808;
+  --color-f1-bg-subtle-dark: #121010;
+  --color-f1-surface-dark: #181414;
+  --color-f1-surface-elevated-dark: #221c1c;
+  --color-f1-text-dark: #f8ecec;
+  --color-f1-text-muted-dark: #b89898;
+  --color-f1-border-dark: #4a2020;
+  --color-f1-red-soft-dark: #2a1010;
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.app-shell {
+  @apply min-h-screen flex flex-col transition-colors duration-300;
+  @apply bg-f1-bg text-f1-text;
+  @apply dark:bg-f1-bg-dark dark:text-f1-text-dark;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(225, 6, 0, 0.12), transparent),
+    linear-gradient(rgba(225, 6, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(225, 6, 0, 0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 48px 48px, 48px 48px;
+}
+
+html[data-theme="dark"] .app-shell {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(225, 6, 0, 0.2), transparent),
+    linear-gradient(rgba(225, 6, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(225, 6, 0, 0.06) 1px, transparent 1px);
+}
+
+.logo-glow {
+  filter: drop-shadow(0 0 20px rgba(225, 6, 0, 0.45))
+    drop-shadow(0 6px 16px rgba(225, 6, 0, 0.2));
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-message-in {
+  animation: fadeSlideUp 0.35s ease-out forwards;
+}
+
+@keyframes pulse-dot {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.75);
+    opacity: 0.45;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.loading-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.prose-message {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  word-break: break-word;
+}
+
+.prose-message p + p {
+  margin-top: 0.75rem;
+}
+
+.prose-message ul,
+.prose-message ol {
+  margin: 0.625rem 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.prose-message ul li,
+.prose-message ol li {
+  position: relative;
+  padding-left: 1.25rem;
+  margin-top: 0.375rem;
+}
+
+.prose-message ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #e10600;
+}
+
+.prose-message ol {
+  counter-reset: list-counter;
+}
+
+.prose-message ol li {
+  counter-increment: list-counter;
+}
+
+.prose-message ol li::before {
+  content: counter(list-counter) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #e10600;
+}
+
+.prose-message strong {
+  font-weight: 600;
+}
